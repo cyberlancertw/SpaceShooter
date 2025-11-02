@@ -1,15 +1,35 @@
 const animation = {
     play: function(){
-        if (setting.phase !== 'pause'){
-            if (setting.tick > 0){
-                background.rotate();
-                background.draw();
+        if (setting.tick === 0){
+            return;
+        }
+        background.rotate();
+        background.draw();
+        switch(setting.phase){
+            case 'menu':{
+                score.initialize();
+                score.draw();
+                //ship.draw();
+                break;
+            }
+            case 'pause':{
+                break;
+            }
+            case 'play':{
                 handleMove();
                 ship.draw();
-                drawPolygon(getContex(), ship.size.polygons, ship.position, ship.size.boundary);
-                window.setTimeout(animation.play, setting.tick);
+                break;
+            }
+            case 'gameover':{
+                score.initialize();
+                score.draw();
+                break;
+            }
+            default:{
+                alert('!');
             }
         }
+        window.setTimeout(animation.play, setting.tick);
     },
     stop: function(){
         setting.tick = 0;
@@ -148,7 +168,6 @@ const setting = {
                 small = window.innerHeight;
                 large = window.innerWidth;
             }
-            //console.log(window.innerWidth, window.innerHeight, small, large);
             if (setting.isPortrait){
                 setting.size.boundary.width = small;
                 setting.size.boundary.height = large;
@@ -165,15 +184,6 @@ const setting = {
                 setting.size.boundary.height -= padding;
                 setting.scale = setting.size.boundary.width / setting.base.boundary.width;
             }
-            // console.log(window.innerWidth, window.innerHeight);
-            // setting.size.boundary.width = window.innerWidth;
-            // setting.size.boundary.height = window.innerHeight;
-            // const padding = Math.min(setting.size.boundary.width, setting.size.boundary.height) * 0.03;
-            // setting.size.boundary.width -= padding;
-            // setting.size.boundary.height -= padding;
-            // setting.scale = setting.isPortrait ? (setting.size.boundary.height / setting.base.boundary.height)  : (setting.size.boundary.width / setting.base.boundary.width);
-
-            //console.log(setting.size.boundary.width, setting.size.boundary.height);
             const canvas = document.getElementById('canvas');
             canvas.width = setting.size.boundary.width;
             canvas.height = setting.size.boundary.height;
@@ -184,6 +194,16 @@ const setting = {
             width: 1,
             height: 1
         }
+    },
+    newGame: function(){
+        ship.initialize();
+        score.now = 0;
+        score.difficulty = 1;
+
+        this.phase = 'play';
+    },
+    gameOver: function(){
+        this.phase = 'gameover';
     }
 };
 
@@ -200,8 +220,6 @@ const ship = {
     },
     base: {
         boundary: {
-            // width: 40,
-            // height: 30
             width: 160,
             height: 120
         },
@@ -263,10 +281,14 @@ const ship = {
         const ctx = getContex();
         // 畫邊框
         ctx.strokeStyle = '#ffffff';
+        drawPolygon(ship.size.polygons, ship.position, ship.size.boundary);
         ctx.strokeRect(this.position.x - this.size.boundary.width / 2, this.position.y - this.size.boundary.height / 2, this.size.boundary.width, this.size.boundary.height);
-
     },
     initialize: function(){
+        this.lives = 3;
+        this.power = 10;
+        this.speed.move = 5;
+        this.speed.shoot = 10;
         this.position.x = setting.size.boundary.width / 2;
         this.position.y = setting.size.boundary.height * 3 / 4;
         this.size.boundary.width = this.base.boundary.width * this.base.scale * setting.scale,
@@ -287,7 +309,110 @@ const ship = {
 const score = {
     now: 0,
     top: 0,
-    difficulty: 1
+    difficulty: 1,
+    position: {
+        lives: {
+            x: 0,
+            y: 0,
+            size: 0
+        },
+        score: {
+            x: 0,
+            y: 0,
+            size: 0
+        },
+        hp: {
+            x: 0,
+            y: 0,
+            size: 0
+        },
+        title: {
+            x: 0,
+            text: {
+                menu: [
+                    {content: '太空生存戰', font: '', y: 0},
+                    {content: '空白鍵或觸碰螢幕開始', font: '', y: 0},
+                    {content: '玩法：ＷＡＳＤ或觸碰螢幕', font: '', y: 0}
+                ],
+                gameover: [
+                    {content: '遊戲結束', font: '', y: 0},
+                    {content: '空白鍵或觸碰螢幕重新開始', font: '', y: 0}
+                ]
+            },
+            menuDesc: {
+                size: 0,
+                font: '',
+                y: 0
+            },
+            gameOverDesc0: {
+                size: 0,
+                font: '',
+                y: 0
+            }
+        }
+    },
+    initialize: function(){
+        this.position.title.x = setting.size.boundary.width / 2;
+        let fromWidth;
+        if (setting.isPortrait){
+            this.position.score.x = setting.size.boundary.width * 1;
+            this.position.lives.x = 0;
+            fromWidth = setting.size.boundary.width;
+        }
+        else{
+            this.position.title.width = setting.size.boundary.height * 0.85;
+            this.position.title.menuDesc.y = setting.size.boundary.height / 4;
+            fromWidth = setting.size.boundary.height;
+        }
+        let width, size;
+        // 標題
+        width = fromWidth * 0.85;
+        // 大字
+        size = width / 5;
+        this.position.title.text.menu[0].font = `${size}px bold 微軟正黑體`;
+        this.position.title.text.menu[0].y = setting.size.boundary.height / 3;
+        // 說明1
+        size = width / 10;
+        this.position.title.text.menu[1].font = `${size}px 微軟正黑體`;
+        this.position.title.text.menu[1].y = this.position.title.text.menu[0].y + size * 3;
+        // 說明2
+        size = width / 12;
+        this.position.title.text.menu[2].font = `${size}px 微軟正黑體`;
+        this.position.title.text.menu[2].y = this.position.title.text.menu[1].y + size * 2;
+        // 遊戲結束
+        width = fromWidth * 0.7;
+        // 大字
+        size = width / 4;
+        this.position.title.text.gameover[0].font = `${size}px bold 微軟正黑體`;
+        this.position.title.text.gameover[0].y = setting.size.boundary.height / 2.5;
+        // 說明
+        size = width / 12;
+        this.position.title.text.gameover[1].font = `${size}px 微軟正黑體`;
+        this.position.title.text.gameover[1].y = this.position.title.text.gameover[0].y + size * 3;
+    },
+    draw: function(){
+        const ctx = getContex();
+        let texts;
+        switch(setting.phase){
+            case 'menu': {
+                texts = this.position.title.text.menu;
+                break;
+            }
+            case 'gameover': {
+                texts = this.position.title.text.gameover;
+                break;
+            }
+        }
+        if (texts){
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#ffffff';
+            for (const text of texts){
+                ctx.font = text.font;
+                ctx.fillText(text.content, this.position.title.x, text.y);
+            }
+
+        }
+    }
 };
 
 const explosion = {
@@ -333,13 +458,13 @@ const keyWeight = {
 window.addEventListener('load', initializeBody);
 
 /**
- * 
- * @param {CanvasRenderingContext2D} ctx 
+ * 畫多邊形到畫布上
  * @param {Object} datas 
- * @param {*} center 
- * @param {*} boundary 
+ * @param {*} center 中心點座標
+ * @param {*} boundary 邊界寬高
  */
-function drawPolygon(ctx, datas, center, boundary){
+function drawPolygon(datas, center, boundary){
+    const ctx = getContex();
     const offset = {
         x: center.x - boundary.width / 2,
         y: center.y - boundary.height / 2
@@ -357,10 +482,17 @@ function drawPolygon(ctx, datas, center, boundary){
     }
 }
 
+/**
+ * 取得畫布
+ * @returns {CanvasRenderingContext2D}
+ */
 function getContex(){
     return document.getElementById('canvas').getContext('2d');
 }
 
+/**
+ * 處理按鈕或螢幕觸碰後有關 ship 移動的事件
+ */
 function handleMove(){
     try {
         let deltaX = 0, deltaY = 0;
@@ -425,16 +557,20 @@ function handleMove(){
     }
 }
 
+/**
+ * HTML DOM 載入完成後的事件
+ */
 function initializeBody(){
     setting.tick = 1000 / setting.fps;
     resetCanvas();
     
-    ship.initialize();
-
     animation.play();
     initializeEvent();
 }
 
+/**
+ * 註冊事件
+ */
 function initializeEvent(){
     document.addEventListener('keydown', pressDocument);
     document.addEventListener('keyup', liftDocument);
@@ -447,10 +583,17 @@ function initializeEvent(){
    
 }
 
+/**
+ * 畫布停止觸碰的事件
+ */
 function liftCanvas(){
     keyPressed['touch'] = false;
 }
 
+/**
+ * 網頁取消按鍵的事件
+ * @param {KeyBoardEvent} event 
+ */
 function liftDocument(event){
     const key = event.code;
     if (key in keyPressed && keyPressed[key]){
@@ -458,51 +601,94 @@ function liftDocument(event){
     }
 }
 
+/**
+ * 網頁按下按鍵的事件
+ * @param {KeyBoardEvent} event 
+ */
 function pressDocument(event){
     const key = event.code;
-    if (key in keyPressed && !keyPressed[key]){
-        keyPressed[key] = true;
+    switch(setting.phase){
+        case 'menu':{
+            // 選單畫面按空白鍵開始遊戲
+            if (key === 'Space'){
+                setting.newGame();
+            }
+            break;
+        }
+        case 'play':{
+            // 遊玩過程中按 WASD 的移動
+            if (key in keyPressed && !keyPressed[key]){
+                keyPressed[key] = true;
+            }
+        }
+        // 遊戲結束畫面按空白鍵回到選單畫面
+        case 'gameover': {
+            if (key === 'Space'){
+                setting.phase = 'menu';
+            }
+        }
     }
     
+    // 開發中使用，P鍵暫停減少耗能
     switch(key){
         case 'KeyP':
-            setting.tick = 0;
+            animation.stop();
             break;
     }
     
 }
 
+/**
+ * 裝置或視窗週整大小時的事件
+ */
 function setOrientation(){
     if (screen.orientation){
         setting.isPortrait = screen.orientation.type === 'portrait-primary' || screen.orientation.type === 'portrait-secondary';
     }
-    // else if (window.orientation){
-    //     setting.isPortrait = window.matchMedia('(orientation: portrait)').matches;
-    //     //window.addEventListener('orientationchange', setting.size.initialize);
-    // }
     else{
         setting.isPortrait = window.matchMedia('(orientation: portrait)').matches;
     }
 }
 
+/**
+ * 畫布重設
+ */
 function resetCanvas(){
     setting.size.initialize();
     background.size.initialize();
     background.initialize();
 }
 
+/**
+ * 碰觸畫布的事件
+ * @param {TouchEvent} event 
+ */
 function touchCanvas(event){
     event.preventDefault();
     if (event.targetTouches){
-        //const canvas = document.getElementById('canvas');
-        const rect = document.getElementById('canvas').getBoundingClientRect();
-        const touch = event.targetTouches[0];
-
-        keyPressed['touch'] = true;
-        keyWeight['touchX'] = touch.clientX - rect.left;
-        keyWeight['touchY'] = touch.clientY - rect.top;
-        //keyWeight['touchX'] = (touch.clientX - rect.left) * canvas.width / rect.width;
-        //keyWeight['touchY'] = (touch.clientY - rect.top) * canvas.width / rect.width;
+        switch(setting.phase){
+            case 'menu': {
+                setting.newGame();
+                break;
+            }
+            case 'play': {
+                // 考慮縮放比例，也許以後會用到
+                //const canvas = document.getElementById('canvas');
+                const rect = document.getElementById('canvas').getBoundingClientRect();
+                const touch = event.targetTouches[0];
+        
+                keyPressed['touch'] = true;
+                keyWeight['touchX'] = touch.clientX - rect.left;
+                keyWeight['touchY'] = touch.clientY - rect.top;
+                //keyWeight['touchX'] = (touch.clientX - rect.left) * canvas.width / rect.width;
+                //keyWeight['touchY'] = (touch.clientY - rect.top) * canvas.width / rect.width;
+                break;
+            }
+            case 'gameover': {
+                setting.phase = 'menu';
+                break;
+            }
+        }
     }
 }
 
